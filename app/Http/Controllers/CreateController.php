@@ -25,42 +25,45 @@ class CreateController extends Controller
 
     public function createOutlet(Request $request)
     {
-        date_default_timezone_set('Asia/Jakarta');
-        $csrfToken = csrf_token();
-        $unik = Str::random(10);
-        $string = $request->input("nama_outlet");
-        $result = substr($string, 0, 2) . substr($string, -1);
+        $outlet = new Outlet([
+            'uid_outlet' => Str::random(10),
+            'kode_outlet' => substr($request->nama_outlet, 0, 2) . substr($request->nama_outlet, -1),
+            'nama_outlet' => $request->nama_outlet,
+            'no_hp' => $request->no_hp,
+            'alamat_outlet' => $request->alamat_outlet,
+            'map_outlet' => $request->map_outlet,
+        ]);
 
-        $outlet = new Outlet();
-        $outlet->uid_outlet = $unik;
-        $outlet->kode_outlet = $result;
-        $outlet->nama_outlet = $request->input("nama_outlet");
-        $outlet->no_hp = $request->input("no_hp");
-        $outlet->alamat_outlet = $request->input("alamat_outlet");
-        $outlet->map_outlet = $request->input("map_outlet");
         if ($request->hasFile('gambar')) {
             $file = $request->file('gambar');
-            $fileName = $unik . time() . '_' . $file->getClientOriginalName();
+            $fileName = $outlet['uid_outlet'] . time() . '_' . $file->getClientOriginalName();
             $file->storeAs('public/outlet/', $fileName); // Simpan di direktori 'public/photos'
-            $outlet->gambar = $fileName; // Simpan nama file gambar di kolom 'photo' pada tabel
+            $outlet['gambar'] = $fileName; // Simpan nama file gambar di kolom 'photo' pada tabel
         }
+
+        $ranking = new Ranking([
+            'uid_ranking' => Str::random(10),
+            'kode_outlet' => $outlet['kode_outlet'],
+            'kebersihan' => 0,
+            'solidaritas' => 0,
+            'royalitas' => 0,
+            'omset' => 0,
+        ]);
+
+        // Simpan Data Outlet
         $outlet->save();
-        $ranking = new Ranking();
-        $ranking->uid_ranking= $unik;
-        $ranking->kode_outlet = $result;
-        $ranking->kebersihan = 0;
-        $ranking->solidaritas = 0;
-        $ranking->royalitas = 0;
-        $ranking->omset = 0;
+
+        // Simpan Data Ranking
         $ranking->save();
 
         Session::flash('success', 'Outlet Berhasil Tambah');
+
         return redirect()->back();
     }
+
     public function createKaryawan(Request $request)
     {
         date_default_timezone_set('Asia/Jakarta');
-        $csrfToken = csrf_token();
         $unik = Str::random(10);
         $penempatan = $request->input("penempatan");
         $outlet = Outlet::where('kode_outlet', $penempatan)->first();
@@ -88,7 +91,6 @@ class CreateController extends Controller
     public function createBarangList(Request $request)
     {
         date_default_timezone_set('Asia/Jakarta');
-        $csrfToken = csrf_token();
         $unik = Str::random(10);
         $string = $request->nama_barang;
         $slice = substr($string, 0, 2) . substr($string, -1);
@@ -107,7 +109,6 @@ class CreateController extends Controller
     public function createOrder(Request $request)
     {
         date_default_timezone_set('Asia/Jakarta');
-        $csrfToken = csrf_token();
         $unik = Str::random(10);
         $kode = Str::random(4);
         $date = date("Ymd");
@@ -168,7 +169,6 @@ class CreateController extends Controller
     public function createProduksi(Request $request)
     {
         date_default_timezone_set('Asia/Jakarta');
-        $csrfToken = csrf_token();
         $unik = Str::random(10);
         $kode = Str::random(4);
         // $date = date("Y-m-d");
@@ -270,7 +270,7 @@ class CreateController extends Controller
         date_default_timezone_set('Asia/Jakarta');
         $unik = Str::random(10);
         $user = $request->user;
-        
+
         $laporan = new Laporan();
         $laporan->uid_laporan = $unik;
         $laporan->outlet = $user;
@@ -287,6 +287,6 @@ class CreateController extends Controller
         $laporan->save();
         Session::flash('success', 'Simpan laporan Berhasil');
         return redirect()->back();
-        
+
     }
 }

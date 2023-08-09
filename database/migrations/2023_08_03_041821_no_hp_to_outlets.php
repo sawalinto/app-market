@@ -16,7 +16,7 @@ class NoHpToOutlets extends Migration
         Schema::table('outlets', function (Blueprint $table) {
             //
             $table->string('no_hp')->after('nama_outlet');
-            $table->string('gambar')->after('map_outlet');
+            $table->string('gambar')->after('map_outlet')->nullable();
         });
     }
 
