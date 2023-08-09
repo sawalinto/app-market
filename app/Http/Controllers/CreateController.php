@@ -18,52 +18,73 @@ use App\Models\produksiBarang;
 use App\Http\Controllers\Controller;
 use App\Models\Posisi;
 use App\Models\Ranking;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Session;
 
 class CreateController extends Controller
 {
 
-    public function createOutlet(Request $request)
+    /**
+     * Fungsi Dalam Create Outlet Melibatkan lebih dari satu aksi yang berkaitan
+     * maka dibuat pencegahan apabila salah satu aksi aksi gagal maka semua proses dianggap gagal
+     * dengan seperti ini dapat mencegah error pada proses transaksi database.
+     *
+     * bisa dicari referensi mengenai database transaction di internet.
+     *
+     * yang kurang hanya validasi, silahkan di cari sendiri buat referensi validasinya.
+     */
+    public function createOutlet(Request $request): RedirectResponse
     {
-        $outlet = new Outlet([
-            'uid_outlet' => Str::random(10),
-            'kode_outlet' => substr($request->nama_outlet, 0, 2) . substr($request->nama_outlet, -1),
-            'nama_outlet' => $request->nama_outlet,
-            'no_hp' => $request->no_hp,
-            'alamat_outlet' => $request->alamat_outlet,
-            'map_outlet' => $request->map_outlet,
-        ]);
+        DB::beginTransaction();
 
-        if ($request->hasFile('gambar')) {
-            $file = $request->file('gambar');
-            $fileName = $outlet['uid_outlet'] . time() . '_' . $file->getClientOriginalName();
-            $file->storeAs('public/outlet/', $fileName); // Simpan di direktori 'public/photos'
-            $outlet['gambar'] = $fileName; // Simpan nama file gambar di kolom 'photo' pada tabel
+        try {
+            $outlet = new Outlet([
+                'uid_outlet' => Str::random(10),
+                'kode_outlet' => substr($request->nama_outlet, 0, 2) . substr($request->nama_outlet, -1),
+                'nama_outlet' => $request->nama_outlet,
+                'no_hp' => $request->no_hp,
+                'alamat_outlet' => $request->alamat_outlet,
+                'map_outlet' => $request->map_outlet,
+            ]);
+
+            if ($request->hasFile('gambar')) {
+                $file = $request->file('gambar');
+                $fileName = $outlet['uid_outlet'] . time() . '_' . $file->getClientOriginalName();
+                $file->storeAs('public/outlet/', $fileName); // Simpan di direktori 'public/photos'
+                $outlet['gambar'] = $fileName; // Simpan nama file gambar di kolom 'photo' pada tabel
+            }
+
+            $ranking = new Ranking([
+                'uid_ranking' => Str::random(10),
+                'kode_outlet' => $outlet['kode_outlet'],
+                'kebersihan' => 0,
+                'solidaritas' => 0,
+                'royalitas' => 0,
+                'omset' => 0,
+            ]);
+
+            // Simpan Data Outlet
+            $outlet->save();
+
+            // Simpan Data Ranking
+            $ranking->save();
+
+            DB::commit();
+
+            Session::flash('success', 'Outlet Berhasil Tambah');
+
+            return redirect()->back();
+        } catch (\Exception $ex) {
+            DB::rollBack();
+            return response()->json(['message' => $ex->getMessage()], $ex->getCode());
         }
-
-        $ranking = new Ranking([
-            'uid_ranking' => Str::random(10),
-            'kode_outlet' => $outlet['kode_outlet'],
-            'kebersihan' => 0,
-            'solidaritas' => 0,
-            'royalitas' => 0,
-            'omset' => 0,
-        ]);
-
-        // Simpan Data Outlet
-        $outlet->save();
-
-        // Simpan Data Ranking
-        $ranking->save();
-
-        Session::flash('success', 'Outlet Berhasil Tambah');
-
-        return redirect()->back();
     }
 
     public function createKaryawan(Request $request)
     {
         date_default_timezone_set('Asia/Jakarta');
+        $csrfToken = csrf_token();
         $unik = Str::random(10);
         $penempatan = $request->input("penempatan");
         $outlet = Outlet::where('kode_outlet', $penempatan)->first();
@@ -90,7 +111,6 @@ class CreateController extends Controller
     //
     public function createBarangList(Request $request)
     {
-        date_default_timezone_set('Asia/Jakarta');
         $unik = Str::random(10);
         $string = $request->nama_barang;
         $slice = substr($string, 0, 2) . substr($string, -1);
@@ -103,12 +123,12 @@ class CreateController extends Controller
         $result->satuan = $request->satuan;
         $result->save();
         Session::flash('success', 'Barang Berhasil Tambah');
-        return redirect('/?dashboard=barangList&_' . $csrfToken);
+
+        return redirect('/?dashboard=barangList&_' . csrf_token());
     }
 
     public function createOrder(Request $request)
     {
-        date_default_timezone_set('Asia/Jakarta');
         $unik = Str::random(10);
         $kode = Str::random(4);
         $date = date("Ymd");
@@ -168,7 +188,6 @@ class CreateController extends Controller
 
     public function createProduksi(Request $request)
     {
-        date_default_timezone_set('Asia/Jakarta');
         $unik = Str::random(10);
         $kode = Str::random(4);
         // $date = date("Y-m-d");
@@ -214,7 +233,6 @@ class CreateController extends Controller
 
     public function createKategory(Request $request)
     {
-        date_default_timezone_set('Asia/Jakarta');
         $unik = Str::random(10);
         $kategory = new Kategory();
         $kategory->uid_kategory = $unik;
@@ -224,7 +242,6 @@ class CreateController extends Controller
         return redirect()->back();
     }
     public function createSatuan(Request $request){
-        date_default_timezone_set('Asia/Jakarta');
         $unik = Str::random(10);
         $satuan = new Satuan();
         $satuan->uid_satuan = $unik;
@@ -235,7 +252,6 @@ class CreateController extends Controller
     }
 
     public function createUser(Request $request){
-        date_default_timezone_set('Asia/Jakarta');
         $unik = Str::random(10);
         // echo $request->roleUser;
         // echo  Hash::make($request->passwordUser);
@@ -257,7 +273,6 @@ class CreateController extends Controller
 
     }
     public function createPosisi(Request $request){
-        date_default_timezone_set('Asia/Jakarta');
         $unik = Str::random(10);
         $posisi = new Posisi();
         $posisi->uid_posisi = $unik;
@@ -267,7 +282,6 @@ class CreateController extends Controller
         return redirect()->back();
     }
     public function createLaporan(Request $request){
-        date_default_timezone_set('Asia/Jakarta');
         $unik = Str::random(10);
         $user = $request->user;
 
